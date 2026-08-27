@@ -2,9 +2,19 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 
-from regie_bench.cli import _summary, evaluate_trial, load_cases, prepare_case
+import pytest
+
+from regie_bench.cli import (
+    _event_usage,
+    _invoke_regie,
+    _summary,
+    evaluate_trial,
+    load_cases,
+    prepare_case,
+)
 
 
 def test_case_catalog_covers_distinct_orchestration_outcomes():
@@ -17,6 +27,54 @@ def test_case_catalog_covers_distinct_orchestration_outcomes():
         "clarification",
         "infrastructure_halt",
     }
+
+
+def test_event_usage_counts_agents_not_persisted_in_task_state():
+    usage = _event_usage([
+        {
+            "component": "agent", "name": "codex:planner",
+            "fresh_tokens": 10, "cached_tokens": 20, "cost_usd": 0.1,
+        },
+        {
+            "component": "agent", "name": "codex:plan-reviewer",
+            "fresh_tokens": 30, "cached_tokens": 40, "cost_usd": 0.2,
+        },
+        {"component": "gate", "name": "test"},
+    ])
+
+    assert usage == {
+        "attempts": 2,
+        "fresh_tokens": 40,
+        "cached_tokens": 60,
+        "cost_usd": 0.3,
+        "models": ["codex:plan-reviewer", "codex:planner"],
+    }
+
+
+def test_invoke_regie_kills_process_group_when_interrupted(tmp_path, monkeypatch):
+    class InterruptedProcess:
+        pid = 4321
+        returncode = None
+
+        def __init__(self):
+            self.communications = 0
+
+        def communicate(self, timeout=None):
+            self.communications += 1
+            if self.communications == 1:
+                raise KeyboardInterrupt
+            return "partial output", None
+
+    process = InterruptedProcess()
+    signals = []
+    monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: process)
+    monkeypatch.setattr(os, "killpg", lambda pid, sig: signals.append((pid, sig)))
+
+    with pytest.raises(KeyboardInterrupt):
+        _invoke_regie(tmp_path, tmp_path / "regie", 1)
+
+    assert signals == [(process.pid, signal.SIGTERM)]
+    assert "BENCHMARK INTERRUPTED" in (tmp_path / "regie.log").read_text()
 
 
 def test_prepare_case_creates_clean_repo_and_isolated_local_origin(tmp_path):

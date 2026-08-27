@@ -164,17 +164,33 @@ def _invoke_regie(trial: Path, regie_root: Path, timeout_minutes: int) -> tuple[
         output, _ = process.communicate(timeout=timeout_minutes * 60)
         exit_code = process.returncode
     except subprocess.TimeoutExpired:
-        os.killpg(process.pid, signal.SIGTERM)
-        try:
-            output, _ = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
-            output, _ = process.communicate()
+        output, _ = _terminate_process_group(process)
         output += f"\nBENCHMARK TIMEOUT after {timeout_minutes} minutes\n"
         exit_code = 124
+    except KeyboardInterrupt:
+        output, _ = _terminate_process_group(process)
+        (trial / "regie.log").write_text(output + "\nBENCHMARK INTERRUPTED\n")
+        raise
     elapsed = time.monotonic() - started
     (trial / "regie.log").write_text(output)
     return exit_code, elapsed
+
+
+def _terminate_process_group(
+    process: subprocess.Popen,
+) -> tuple[str, str | None]:
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return process.communicate()
+    try:
+        return process.communicate(timeout=10)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        return process.communicate()
 
 
 def _state_path(trial: Path) -> Path | None:
@@ -194,30 +210,15 @@ def _all_attempts(state: dict[str, Any]) -> list[dict[str, Any]]:
     return attempts
 
 
-def _usage(attempts: list[dict[str, Any]]) -> dict[str, Any]:
-    totals: dict[str, Any] = {
-        "attempts": len(attempts),
-        "fresh_tokens": 0,
-        "cached_tokens": 0,
-        "cost_usd": 0.0,
-        "models": [],
+def _event_usage(stage_breakdown: list[dict[str, Any]]) -> dict[str, Any]:
+    agents = [row for row in stage_breakdown if row["component"] == "agent"]
+    return {
+        "attempts": len(agents),
+        "fresh_tokens": sum(row["fresh_tokens"] for row in agents),
+        "cached_tokens": sum(row["cached_tokens"] for row in agents),
+        "cost_usd": round(sum(row["cost_usd"] for row in agents), 6),
+        "models": sorted({row["name"] for row in agents}),
     }
-    models: set[str] = set()
-    for attempt in attempts:
-        metrics = attempt.get("metrics", {})
-        totals["fresh_tokens"] += (
-            metrics.get("new_input_tokens", 0)
-            + metrics.get("cache_write_input_tokens", 0)
-            + metrics.get("output_tokens", 0)
-        )
-        totals["cached_tokens"] += metrics.get("cached_input_tokens", 0)
-        totals["cost_usd"] += metrics.get("cost_usd", 0.0)
-        binding = attempt.get("binding", {})
-        if binding.get("cli") and binding.get("model"):
-            models.add(f'{binding["cli"]}:{binding["model"]}')
-    totals["cost_usd"] = round(totals["cost_usd"], 6)
-    totals["models"] = sorted(models)
-    return totals
 
 
 def _stage_breakdown(state_file: Path | None) -> list[dict[str, Any]]:
@@ -289,7 +290,8 @@ def evaluate_trial(case: Case, trial: Path, *, label: str, provider: str,
     state_file = _state_path(trial)
     state = json.loads(state_file.read_text()) if state_file else {}
     attempts = _all_attempts(state)
-    usage = _usage(attempts)
+    stage_breakdown = _stage_breakdown(state_file)
+    usage = _event_usage(stage_breakdown)
     worktree_value = state.get("worktree_path", "")
     worktree = Path(worktree_value) if worktree_value else trial / "repo"
     acceptance_passed, _ = _acceptance(case, worktree, trial)
@@ -344,7 +346,7 @@ def evaluate_trial(case: Case, trial: Path, *, label: str, provider: str,
         "exit_code": exit_code,
         "elapsed_seconds": round(elapsed, 3),
         "changed_files": changed_files,
-        "stage_breakdown": _stage_breakdown(state_file),
+        "stage_breakdown": stage_breakdown,
         **usage,
     }
     (trial / "result.json").write_text(json.dumps(result, indent=2) + "\n")
