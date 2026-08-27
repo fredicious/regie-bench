@@ -10,7 +10,7 @@ from regie_bench.cli import _summary, evaluate_trial, load_cases, prepare_case
 def test_case_catalog_covers_distinct_orchestration_outcomes():
     cases = load_cases()
 
-    assert len(cases) == 6
+    assert len(cases) == 7
     assert {case.expected_route for case in cases.values()} == {"direct", "planned"}
     assert {case.expected_outcome for case in cases.values()} == {
         "completed",
@@ -85,6 +85,25 @@ def test_evaluate_clarification_uses_structured_blocked_question(tmp_path):
     run_dir = trial / "regie-home" / "runs" / "run"
     run_dir.mkdir(parents=True)
     (run_dir / "state.json").write_text(json.dumps(state))
+    (run_dir / "events.jsonl").write_text(
+        json.dumps({
+            "kind": "attempt",
+            "task": "T1",
+            "stage": "build",
+            "attempt": 1,
+            "outcome": "blocked",
+            "turns": 1,
+            "duration_seconds": 4.5,
+            "binding": {"cli": "codex", "model": "test-model"},
+            "metrics": {
+                "new_input_tokens": 10,
+                "cached_input_tokens": 20,
+                "cache_write_input_tokens": 2,
+                "output_tokens": 3,
+                "cost_usd": 0.01,
+            },
+        }) + "\n"
+    )
 
     result = evaluate_trial(
         case,
@@ -100,6 +119,19 @@ def test_evaluate_clarification_uses_structured_blocked_question(tmp_path):
     assert result["fresh_tokens"] == 15
     assert result["cached_tokens"] == 20
     assert result["models"] == ["codex:test-model"]
+    assert result["stage_breakdown"] == [{
+        "component": "agent",
+        "task": "T1",
+        "stage": "build",
+        "name": "codex:test-model",
+        "attempt": 1,
+        "outcome": "blocked",
+        "turns": 1,
+        "duration_seconds": 4.5,
+        "fresh_tokens": 15,
+        "cached_tokens": 20,
+        "cost_usd": 0.01,
+    }]
     assert (trial / "result.json").is_file()
 
 

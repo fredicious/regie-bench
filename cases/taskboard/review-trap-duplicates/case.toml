@@ -1,0 +1,7 @@
+id = "review-trap-duplicates"
+fixture = "taskboard"
+description = "A duplicate-title feature with subtle Unicode and legacy-data traps."
+expected_route = "direct"
+expected_outcome = "completed"
+evaluator = "acceptance.test.mjs"
+

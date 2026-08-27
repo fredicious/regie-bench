@@ -220,6 +220,60 @@ def _usage(attempts: list[dict[str, Any]]) -> dict[str, Any]:
     return totals
 
 
+def _stage_breakdown(state_file: Path | None) -> list[dict[str, Any]]:
+    if state_file is None:
+        return []
+    events_file = state_file.parent / "events.jsonl"
+    if not events_file.is_file():
+        return []
+    rows = []
+    for line in events_file.read_text().splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        kind = event.get("kind")
+        if kind == "attempt":
+            metrics = event.get("metrics", {})
+            binding = event.get("binding", {})
+            rows.append({
+                "component": "agent",
+                "task": event.get("task"),
+                "stage": event.get("stage"),
+                "name": f'{binding.get("cli", "?")}:{binding.get("model", "?")}',
+                "attempt": event.get("attempt"),
+                "outcome": event.get("outcome"),
+                "turns": event.get("turns", 0),
+                "duration_seconds": event.get("duration_seconds", 0.0),
+                "fresh_tokens": (
+                    metrics.get("new_input_tokens", 0)
+                    + metrics.get("cache_write_input_tokens", 0)
+                    + metrics.get("output_tokens", 0)
+                ),
+                "cached_tokens": metrics.get("cached_input_tokens", 0),
+                "cost_usd": metrics.get("cost_usd", 0.0),
+            })
+        elif kind == "gate":
+            rows.append({
+                "component": "gate",
+                "task": event.get("task"),
+                "stage": event.get("stage"),
+                "name": event.get("gate"),
+                "outcome": event.get("outcome"),
+                "duration_seconds": event.get("duration_seconds", 0.0),
+            })
+        elif kind == "environment_setup":
+            rows.append({
+                "component": "setup",
+                "task": event.get("task"),
+                "stage": "setup",
+                "name": event.get("command"),
+                "outcome": event.get("outcome"),
+                "duration_seconds": event.get("duration_seconds", 0.0),
+            })
+    return rows
+
+
 def _acceptance(case: Case, worktree: Path, trial: Path) -> tuple[bool | None, str]:
     if not case.evaluator:
         return None, "no acceptance evaluator for this outcome"
@@ -290,6 +344,7 @@ def evaluate_trial(case: Case, trial: Path, *, label: str, provider: str,
         "exit_code": exit_code,
         "elapsed_seconds": round(elapsed, 3),
         "changed_files": changed_files,
+        "stage_breakdown": _stage_breakdown(state_file),
         **usage,
     }
     (trial / "result.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -304,6 +359,18 @@ def _print_result(result: dict[str, Any]) -> None:
         f'fresh={result["fresh_tokens"]:,} cached={result["cached_tokens"]:,} '
         f'{result["elapsed_seconds"]:.1f}s'
     )
+    for row in result.get("stage_breakdown", []):
+        if row["component"] == "agent":
+            print(
+                f'      agent {row["stage"]:16} {row["name"]:24} '
+                f'{row["duration_seconds"]:6.1f}s · {row["fresh_tokens"]:,} fresh · '
+                f'{row["cached_tokens"]:,} cached · {row["outcome"]}'
+            )
+        else:
+            print(
+                f'      {row["component"]:5} {row["stage"]:16} {row["name"]:24} '
+                f'{row["duration_seconds"]:6.2f}s · {row["outcome"]}'
+            )
 
 
 def run_benchmark(case: Case, results_root: Path, regie_root: Path, provider: str,

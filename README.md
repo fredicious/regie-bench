@@ -15,6 +15,8 @@ orchestration decisions rather than six variations of the same coding task:
 - an accessible UI change;
 - a deliberately ambiguous request that should ask a question;
 - a persistence migration that should earn planning;
+- a duplicate-title edge case designed to test whether review catches a subtle
+  Unicode and malformed-data defect;
 - an unavailable setup command that should halt before spending model tokens.
 
 ## Quick start
@@ -44,7 +46,8 @@ uv run regie-bench report --baseline before --candidate after
 Trials are written under `results/` and ignored by Git. Every trial contains the
 clean target repository, a local bare origin, an isolated `REGIE_HOME`, Régie's
 combined log, hidden-acceptance output when applicable, and a machine-readable
-`result.json`.
+`result.json`. Results include a stage breakdown for each agent call, setup, and
+mechanical gate so orchestration overhead can be attributed instead of guessed.
 
 Régie's target config sets `workflow.submit_pr = false`. This still performs
 implementation, mechanical gates, review, and finalization, but finishes locally
