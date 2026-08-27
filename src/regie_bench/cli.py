@@ -242,7 +242,7 @@ def _stage_breakdown(state_file: Path | None) -> list[dict[str, Any]]:
                 "stage": event.get("stage"),
                 "name": f'{binding.get("cli", "?")}:{binding.get("model", "?")}',
                 "attempt": event.get("attempt"),
-                "outcome": event.get("outcome"),
+                "outcome": event.get("semantic_outcome") or event.get("outcome"),
                 "turns": event.get("turns", 0),
                 "duration_seconds": event.get("duration_seconds", 0.0),
                 "fresh_tokens": (
