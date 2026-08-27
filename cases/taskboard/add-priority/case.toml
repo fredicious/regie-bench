@@ -1,0 +1,6 @@
+id = "add-priority"
+fixture = "taskboard"
+description = "A small feature crossing domain, persistence, and UI."
+expected_route = "direct"
+expected_outcome = "completed"
+evaluator = "acceptance.test.mjs"

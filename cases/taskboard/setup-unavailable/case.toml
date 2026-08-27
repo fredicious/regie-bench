@@ -1,0 +1,5 @@
+id = "setup-unavailable"
+fixture = "taskboard"
+description = "A deterministic setup failure that must spend zero model attempts."
+expected_route = "direct"
+expected_outcome = "infrastructure_halt"

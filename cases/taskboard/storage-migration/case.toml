@@ -1,0 +1,6 @@
+id = "storage-migration"
+fixture = "taskboard"
+description = "A versioned persistence migration that should earn planning."
+expected_route = "planned"
+expected_outcome = "completed"
+evaluator = "acceptance.test.mjs"

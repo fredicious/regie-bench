@@ -1,0 +1,29 @@
+base_branch = "main"
+test_globs = ["tests/**"]
+eval_trigger_globs = ["src/**", "index.html"]
+
+[providers]
+enabled = ["codex"]
+
+[workflow]
+default_tier = "auto"
+direct_execution = true
+plan_reviews = true
+design_reviews = true
+final_review = true
+knowledge = false
+reflection = false
+submit_pr = false
+max_parallel_tasks = 2
+
+[commands]
+setup = "regie-bench-command-that-does-not-exist --version"
+test = "npm test"
+lint = "npm run lint"
+build = "npm run build"
+
+[gates.visual]
+command = "npm run build"
+stages = ["finalize"]
+trigger_globs = ["src/**", "index.html"]
+tiers = ["standard", "critical"]

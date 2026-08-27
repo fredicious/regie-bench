@@ -1,0 +1,6 @@
+id = "reject-blank-title"
+fixture = "taskboard"
+description = "A bounded domain bug fix with precise behavior."
+expected_route = "direct"
+expected_outcome = "completed"
+evaluator = "acceptance.test.mjs"

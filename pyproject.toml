@@ -1,0 +1,23 @@
+[project]
+name = "regie-bench"
+version = "0.1.0"
+description = "Repeatable product-engineering benchmarks for Régie"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+regie-bench = "regie_bench.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.9,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.0",
+]
+
+[tool.ruff]
+line-length = 100

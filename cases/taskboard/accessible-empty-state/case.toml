@@ -1,0 +1,6 @@
+id = "accessible-empty-state"
+fixture = "taskboard"
+description = "A narrow accessible UI change with hidden semantic checks."
+expected_route = "direct"
+expected_outcome = "completed"
+evaluator = "acceptance.test.mjs"

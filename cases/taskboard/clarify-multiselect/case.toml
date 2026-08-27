@@ -1,0 +1,5 @@
+id = "clarify-multiselect"
+fixture = "taskboard"
+description = "An underspecified interaction that should produce a question."
+expected_route = "direct"
+expected_outcome = "clarification"
