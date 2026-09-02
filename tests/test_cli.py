@@ -20,13 +20,15 @@ from regie_bench.cli import (
 def test_case_catalog_covers_distinct_orchestration_outcomes():
     cases = load_cases()
 
-    assert len(cases) == 7
+    assert len(cases) == 8
     assert {case.expected_route for case in cases.values()} == {"direct", "planned"}
     assert {case.expected_outcome for case in cases.values()} == {
         "completed",
         "clarification",
         "infrastructure_halt",
     }
+    assert cases["strict-quantity"].track == "holdout"
+    assert cases["strict-quantity"].evaluator_command == ("python",)
 
 
 def test_event_usage_counts_agents_not_persisted_in_task_state():
@@ -204,7 +206,7 @@ def test_completed_case_evaluators_reject_the_unchanged_fixture(tmp_path):
         env = os.environ.copy()
         env["TARGET_REPO"] = str(trial / "repo")
         result = subprocess.run(
-            ["node", "--test", str(case.evaluator)],
+            [*case.evaluator_command, str(case.evaluator)],
             cwd=trial / "repo",
             env=env,
             check=False,

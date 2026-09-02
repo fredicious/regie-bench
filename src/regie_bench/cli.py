@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import signal
 import statistics
@@ -28,7 +29,9 @@ class Case:
     expected_outcome: str
     path: Path
     evaluator: Path | None
+    evaluator_command: tuple[str, ...]
     overlay: Path | None
+    track: str
 
     @property
     def brief(self) -> Path:
@@ -53,7 +56,9 @@ def load_cases(root: Path = ROOT) -> dict[str, Case]:
             expected_outcome=raw["expected_outcome"],
             path=case_dir,
             evaluator=evaluator,
+            evaluator_command=tuple(raw.get("evaluator_command", ["node", "--test"])),
             overlay=overlay if overlay.is_dir() else None,
+            track=raw.get("track", "development"),
         )
     return cases
 
@@ -280,7 +285,12 @@ def _acceptance(case: Case, worktree: Path, trial: Path) -> tuple[bool | None, s
         return None, "no acceptance evaluator for this outcome"
     env = os.environ.copy()
     env["TARGET_REPO"] = str(worktree)
-    result = _run(["node", "--test", str(case.evaluator)], worktree, check=False, env=env)
+    result = _run(
+        [*case.evaluator_command, str(case.evaluator)],
+        worktree,
+        check=False,
+        env=env,
+    )
     (trial / "acceptance.log").write_text(result.stdout)
     return result.returncode == 0, result.stdout
 
@@ -331,6 +341,7 @@ def evaluate_trial(case: Case, trial: Path, *, label: str, provider: str,
         "schema_version": 1,
         "trial_id": trial.name,
         "case_id": case.id,
+        "track": case.track,
         "label": label,
         "provider": provider,
         "regie_version": regie_version,
@@ -402,10 +413,16 @@ def smoke(cases: dict[str, Case], results_root: Path) -> int:
     for case in cases.values():
         trial = prepare_case(case, results_root, "codex")
         repo = trial / "repo"
+        configured = tomllib.loads((repo / "regie.toml").read_text())["commands"]
         outputs = []
         case_passed = True
-        for command in (["npm", "test"], ["npm", "run", "lint"], ["npm", "run", "build"]):
-            result = _run(command, repo, check=False)
+        # Setup can be intentionally unavailable in an infrastructure-halt
+        # case. Smoke validates the immutable fixture's own quality commands;
+        # the Régie trial validates setup behavior.
+        for name in ("test", "lint", "build"):
+            if name not in configured:
+                continue
+            result = _run(shlex.split(configured[name]), repo, check=False)
             outputs.append(result.stdout)
             case_passed = case_passed and result.returncode == 0
         (trial / "smoke.log").write_text("\n".join(outputs))
@@ -505,7 +522,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "list":
         for case in cases.values():
             print(
-                f"{case.id:26} {case.expected_route:7} {case.expected_outcome:19} "
+                f"{case.id:26} {case.track:11} {case.expected_route:7} "
+                f"{case.expected_outcome:19} "
                 f"{case.description}"
             )
         return 0

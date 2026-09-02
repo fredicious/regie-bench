@@ -1,0 +1,22 @@
+base_branch = "main"
+test_globs = ["tests/**"]
+eval_trigger_globs = ["src/**"]
+
+[providers]
+enabled = ["codex"]
+
+[workflow]
+default_tier = "auto"
+direct_execution = true
+plan_reviews = true
+design_reviews = true
+final_review = true
+knowledge = false
+reflection = false
+submit_pr = false
+max_parallel_tasks = 1
+
+[commands]
+test = "python -m unittest discover -s tests -v"
+lint = "python -m compileall -q src tests"
+build = "python -m compileall -q src"

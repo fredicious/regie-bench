@@ -1,0 +1,8 @@
+id = "strict-quantity"
+fixture = "inventory-cli"
+description = "A Python type-boundary bug fix held out from Taskboard tuning."
+expected_route = "direct"
+expected_outcome = "completed"
+evaluator = "acceptance_test.py"
+evaluator_command = ["python"]
+track = "holdout"

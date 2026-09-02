@@ -36,6 +36,24 @@ Provider services and model aliases can change independently of Régie. A result
 from different dates is weaker evidence than an interleaved A/B run using pinned
 model identifiers.
 
+## Benchmark matrix
+
+| Case | Stack | Track | Route | Expected outcome | Primary signal |
+| --- | --- | --- | --- | --- | --- |
+| `reject-blank-title` | Browser JS | development | direct | completed | narrow bug-fix cost |
+| `add-priority` | Browser JS | development | direct | completed | cross-layer feature |
+| `accessible-empty-state` | Browser JS | development | direct | completed | semantic UI behavior |
+| `clarify-multiselect` | Browser JS | development | direct | clarification | intake ambiguity |
+| `storage-migration` | Browser JS | development | planned | completed | risk planning and review convergence |
+| `review-trap-duplicates` | Browser JS | development | direct | completed | adversarial review value |
+| `setup-unavailable` | Browser JS | development | direct | infrastructure halt | zero-token preflight |
+| `strict-quantity` | Python CLI | holdout | direct | completed | cross-language type boundary |
+
+The matrix is intentionally asymmetric: Taskboard is the daily development
+track, while `strict-quantity` is evaluated only after a candidate policy is
+chosen. A holdout failure invalidates the candidate claim; it does not authorize
+tuning that candidate against the holdout in the same comparison cycle.
+
 ## Acceptance layers
 
 Public tests express established repository behavior and are available to the

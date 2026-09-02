@@ -5,7 +5,7 @@ Régie Bench is a controlled product-engineering benchmark for
 changes improve outcomes across repeatable briefs without creating real pull
 requests.
 
-The first fixture is **Taskboard**, a deliberately small browser TODO app with a
+The development fixture is **Taskboard**, a deliberately small browser TODO app with a
 pure JavaScript domain layer, accessible HTML, public tests, deterministic build
 and lint commands, and no runtime dependencies. Its cases exercise different
 orchestration decisions rather than six variations of the same coding task:
@@ -18,6 +18,11 @@ orchestration decisions rather than six variations of the same coding task:
 - a duplicate-title edge case designed to test whether review catches a subtle
   Unicode and malformed-data defect;
 - an unavailable setup command that should halt before spending model tokens.
+
+The first cross-language holdout is **Inventory CLI**, a dependency-free Python
+command-line project with a type-boundary case. Its evaluator supports the same
+isolated hidden-acceptance contract through a case-specific command, rather than
+assuming every fixture uses Node.js.
 
 ## Quick start
 
@@ -68,11 +73,12 @@ are not included in the agent's repository or task packet.
 ## Guarding against benchmark overfitting
 
 Taskboard is the fast regression track, not the definition of success. New Régie
-behavior should not be accepted solely because this fixture improves. Planned
-next fixtures are a Python CLI and a small HTTP API. Some future cases should be
-held back from day-to-day tuning, and briefs should periodically gain paraphrased
-variants. Record the Régie commit, model/provider, and repeated runs whenever
-publishing a comparison.
+behavior should not be accepted solely because this fixture improves. The Python
+CLI case is marked as a holdout and should run only after a candidate policy is
+chosen; a small HTTP API remains the next stack expansion. Future cases should
+continue to be held back from day-to-day tuning, and briefs should periodically
+gain paraphrased variants. Record the Régie commit, model/provider, and repeated
+runs whenever publishing a comparison.
 
 See [Methodology](docs/METHODOLOGY.md) for the experiment protocol and the limits
 on what a benchmark result can establish.

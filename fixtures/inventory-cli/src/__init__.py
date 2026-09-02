@@ -1,0 +1,1 @@
+"""Inventory CLI domain package."""
