@@ -13,6 +13,7 @@ import time
 import tomllib
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -494,8 +495,20 @@ def report(results_root: Path, baseline: str | None, candidate: str | None) -> i
     return 0
 
 
+def _package_version() -> str:
+    try:
+        return version("regie-bench")
+    except PackageNotFoundError:
+        from regie_bench import __version__
+
+        return __version__
+
+
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Repeatable Régie benchmarks")
+    parser = argparse.ArgumentParser(
+        prog="regie-bench", description="Repeatable Régie benchmarks"
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {_package_version()}")
     parser.add_argument("--results", type=Path, default=DEFAULT_RESULTS)
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("list", help="list benchmark cases")
