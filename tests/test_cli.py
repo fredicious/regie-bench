@@ -4,12 +4,15 @@ import json
 import os
 import signal
 import subprocess
+import tomllib
+from pathlib import Path
 
 import pytest
 
 from regie_bench.cli import (
     _event_usage,
     _invoke_regie,
+    _parser,
     _summary,
     evaluate_trial,
     load_cases,
@@ -244,3 +247,14 @@ def test_summary_uses_medians_and_rates():
     assert summary["route_accuracy"] == 1.0
     assert summary["median_seconds"] == 2.0
     assert summary["median_fresh_tokens"] == 200
+
+
+def test_version_flag_prints_package_version(capsys):
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    expected = tomllib.loads(pyproject.read_text())["project"]["version"]
+
+    with pytest.raises(SystemExit) as exit_info:
+        _parser().parse_args(["--version"])
+
+    assert exit_info.value.code == 0
+    assert capsys.readouterr().out.strip() == f"regie-bench {expected}"
